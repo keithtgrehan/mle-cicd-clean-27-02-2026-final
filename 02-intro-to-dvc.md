@@ -88,3 +88,100 @@ So in the end you only add the `.dvc` files to git and the data is stored in the
 Versioning large data files and directories for data science is powerful, but often not enough. Data needs to be filtered, cleaned, and transformed before training ML models - for that purpose DVC introduces a **build system** to define, execute and track **data pipelines** — a series of **data processing stages**, that produce a final result.
 
 If you want to read more about pipelines you can read the [documentation](https://dvc.org/doc/start/data-pipelines). We will not go into detail here.
+
+
+
+# Notebook 2 – Intro to Data Version Control (DVC)
+
+## Purpose
+
+This notebook introduces **DVC (Data Version Control)**, a tool used in machine learning projects to **version datasets, manage data pipelines, and ensure experiment reproducibility**.
+
+Traditional **Git works well for code but not for large datasets**. DVC solves this problem by storing large data externally while keeping **lightweight metadata files in Git**.
+
+The result is a system where:
+
+- **Git tracks code and metadata**
+- **DVC tracks datasets**
+- **Cloud storage holds the actual data**
+
+---
+
+# What is DVC
+
+[DVC](https://dvc.org/) is an open-source tool developed by **iterative.ai** that enables:
+
+- Data versioning
+- Pipeline management
+- Experiment reproducibility
+
+It can be thought of as **Git for data science projects**.
+
+Important distinction:
+
+| Tool | Purpose |
+|-----|------|
+| Git | Version control for code |
+| DVC | Version control for datasets and pipelines |
+| MLflow | Model tracking |
+
+DVC **does not store large data inside Git**. Instead it stores **references to data**.
+
+---
+
+# Basic Uses of DVC
+
+DVC helps data science teams apply **software engineering best practices** to ML projects.
+
+Typical uses include:
+
+- Tracking large datasets
+- Comparing model metrics across experiments
+- Reproducing machine learning experiments
+- Sharing datasets across projects
+- Managing ML pipelines
+
+---
+
+# Data Versioning
+
+DVC allows datasets to be **versioned similarly to code commits**.
+
+Instead of storing the dataset directly in Git, DVC creates a **small metadata file** that references the dataset.
+
+### Example dataset
+
+We download the **NYC Green Taxi dataset**:
+
+```bash
+wget -P ./data https://d37ci6vzurychx.cloudfront.net/trip-data/green_tripdata_2025-01.parquet
+
+Key Concept
+
+DVC separates data storage from version control.
+
+Git Commit
+   ↓
+Code + .dvc metadata
+   ↓
+DVC references dataset
+   ↓
+Dataset stored in remote storage
+
+When collaborators run:
+
+dvc pull
+
+they retrieve the exact dataset version required for the experiment.
+
+
+Key Takeaways
+
+DVC enables:
+	•	Version control for large datasets
+	•	Reproducible ML workflows
+	•	Efficient collaboration in data science teams
+	•	Pipeline management for ML training stages
+	•	Integration with CI/CD systems
+
+This allows machine learning projects to adopt the same engineering discipline used in modern software development.
