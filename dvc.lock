@@ -1,8 +1,7 @@
 schema: '2.0'
 stages:
-  features:
-    cmd: python src/features.py data/green_tripdata_2025-01.parquet 
-      data/features.parquet
+  train:
+    cmd: python -m src.train
     deps:
     - path: data/green_tripdata_2025-01.parquet
       hash: md5
@@ -10,34 +9,28 @@ stages:
       size: 3110
     - path: src/features.py
       hash: md5
-      md5: 473d2d9ab98bbc46af8690345c88c94b
-      size: 862
-    outs:
-    - path: data/features.parquet
-      hash: md5
-      md5: 068b3a3c1acd32e61ad9d757460c80b5
-      size: 3110
-  train:
-    cmd: python src/train.py data/features.parquet model.pkl metrics.json
-    deps:
-    - path: data/features.parquet
-      hash: md5
-      md5: 068b3a3c1acd32e61ad9d757460c80b5
-      size: 3110
+      md5: de00f46d00a3473e13d666106b883665
+      size: 886
     - path: src/train.py
       hash: md5
-      md5: df01a26cbec608131d36f03b1d61a6c4
-      size: 2908
+      md5: d126db7b40a085f9d63737c7abe76b22
+      size: 2542
     params:
       params.yaml:
+        train.feature_columns:
+        - vendor_id
+        - passenger_count
+        - trip_distance
+        train.model_type: linear_regression
         train.random_state: 42
+        train.target_column: fare_amount
         train.test_size: 0.2
     outs:
     - path: metrics.json
       hash: md5
-      md5: fbe86d76291d0ba9ec642b353e0c30e5
-      size: 32
-    - path: model.pkl
+      md5: 3433d7665c1dcfb544f8123d9869ac03
+      size: 222
+    - path: models/model.joblib
       hash: md5
-      md5: 46d69ff6852f33579ce2c4c3d9853438
-      size: 1011
+      md5: dffad3cd563833c40d9e2cc43045ed53
+      size: 896

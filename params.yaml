@@ -1,3 +1,9 @@
 train:
   test_size: 0.2
   random_state: 42
+  target_column: fare_amount
+  feature_columns:
+    - vendor_id
+    - passenger_count
+    - trip_distance
+  model_type: linear_regression
