@@ -94,5 +94,5 @@ with mlflow.start_run() as run:
 
 if cml_run:
     with open("metrics.txt", "w") as f:
-        f.write(f"RMSE on the Train Set: {rmse_train}")
-        f.write(f"RMSE on the Test Set: {rmse_test}")
+        f.write(f"RMSE on the Train Set: {rmse_train}\n")
+        f.write(f"RMSE on the Test Set: {rmse_test}\n")
