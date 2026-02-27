@@ -1,4 +1,4 @@
 [core]
     remote = myremote
 ['remote "myremote"']
-    url = gs://YOUR_BUCKET_NAME/
+    url = gs://keith-dvc-1772193245/
