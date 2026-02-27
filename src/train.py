@@ -8,7 +8,6 @@ from sklearn.metrics import root_mean_squared_error
 from sklearn.pipeline import make_pipeline
 import xgboost as xgb
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "--cml_run", default=False, action=argparse.BooleanOptionalAction, required=True
