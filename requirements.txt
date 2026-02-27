@@ -1,2 +1,4 @@
 pytest
 black
+pathspec>=1.0.0
+dvc
