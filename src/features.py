@@ -1,28 +1,28 @@
-import argparse
-from pathlib import Path
+from __future__ import annotations
 
 import pandas as pd
 
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate numeric features parquet.")
-    parser.add_argument("input_path", help="Input parquet dataset path.")
-    parser.add_argument("output_path", help="Output parquet feature dataset path.")
-    return parser.parse_args()
+def build_features(
+    df: pd.DataFrame, train_params: dict
+) -> tuple[pd.DataFrame, pd.Series]:
+    """Return model matrix X and target y based on training parameters."""
+    target_column = str(train_params["target_column"])
+    feature_columns = [str(c) for c in train_params["feature_columns"]]
 
+    missing = [c for c in [target_column, *feature_columns] if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing required columns: {missing}")
 
-def main() -> None:
-    args = parse_args()
-    df = pd.read_parquet(args.input_path)
+    data = df[[*feature_columns, target_column]].copy()
+    data = data.dropna(subset=[target_column])
+    data = data.dropna(subset=feature_columns)
 
-    features_df = df.select_dtypes(include="number").dropna().reset_index(drop=True)
-    if features_df.empty:
-        raise ValueError("Feature dataset is empty after numeric selection and dropna.")
+    if data.empty:
+        raise ValueError(
+            "No rows remain after dropping missing values for features/target."
+        )
 
-    output_path = Path(args.output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    features_df.to_parquet(output_path, index=False)
-
-
-if __name__ == "__main__":
-    main()
+    X = data[feature_columns]
+    y = data[target_column]
+    return X, y

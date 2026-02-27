@@ -60,6 +60,18 @@ dvc pull
 dvc push
 ```
 
+## Reproducible ML Pipeline
+
+After pulling data, run the training stage with DVC:
+
+```bash
+dvc repro
+```
+
+Pipeline outputs:
+- model: `models/model.joblib`
+- metrics: `metrics.json`
+
 ## Setup (Fresh Clone)
 
 ```bash

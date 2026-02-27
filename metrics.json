@@ -1,0 +1,12 @@
+{
+  "rmse": 2.3000000000000007,
+  "model_type": "linear_regression",
+  "target_column": "fare_amount",
+  "feature_columns": [
+    "vendor_id",
+    "passenger_count",
+    "trip_distance"
+  ],
+  "n_train": 3,
+  "n_test": 1
+}
