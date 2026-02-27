@@ -1,3 +1,6 @@
 pytest
 dvc[gs]
 pre-commit
+pandas
+scikit-learn
+joblib

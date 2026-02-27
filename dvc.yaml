@@ -1,0 +1,21 @@
+stages:
+  features:
+    cmd: python src/features.py data/green_tripdata_2025-01.parquet data/features.parquet
+    deps:
+      - src/features.py
+      - data/green_tripdata_2025-01.parquet
+    outs:
+      - data/features.parquet
+
+  train:
+    cmd: python src/train.py data/features.parquet model.pkl metrics.json
+    deps:
+      - src/train.py
+      - data/features.parquet
+    params:
+      - train.test_size
+      - train.random_state
+    outs:
+      - model.pkl
+    metrics:
+      - metrics.json

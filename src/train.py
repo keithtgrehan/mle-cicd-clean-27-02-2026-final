@@ -1,98 +1,92 @@
-import os
 import argparse
+import json
+from pathlib import Path
+
+import joblib
 import pandas as pd
-import mlflow
+import yaml
+from sklearn.linear_model import LinearRegression
+from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
-from sklearn.feature_extraction import DictVectorizer
-from sklearn.metrics import root_mean_squared_error
-from sklearn.pipeline import make_pipeline
-import xgboost as xgb
-
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    "--cml_run", default=False, action=argparse.BooleanOptionalAction, required=True
-)
-args = parser.parse_args()
-cml_run = args.cml_run
-
-GOOGLE_APPLICATION_CREDENTIALS = "./credentials.json"
-
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI")
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GOOGLE_APPLICATION_CREDENTIALS
 
 
-# Set up the connection to MLflow
-mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-
-# Setup the MLflow experiment
-mlflow.set_experiment("green-taxi-trip-duration-xgb")
-
-# Set variables
-features = ["PULocationID", "DOLocationID", "trip_distance"]
-target = "duration"
-model_name = "green-taxi-trip-duration-xgb"
-
-df = pd.read_parquet(f"data/green_tripdata_2025-01.parquet")
-
-
-def calculate_trip_duration_in_minutes(df):
-    df["trip_duration_minutes"] = (
-        df["lpep_dropoff_datetime"] - df["lpep_pickup_datetime"]
-    ).dt.total_seconds() / 60
-    df = df[(df["trip_duration_minutes"] >= 1) & (df["trip_duration_minutes"] <= 60)]
-    return df
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Train a linear regression model.")
+    parser.add_argument("input_path", help="Path to engineered features parquet file.")
+    parser.add_argument("model_output", help="Path to output model pickle file.")
+    parser.add_argument("metrics_output", help="Path to output metrics JSON file.")
+    parser.add_argument(
+        "--params-path",
+        default="params.yaml",
+        help="Path to parameters YAML file.",
+    )
+    return parser.parse_args()
 
 
-def preprocess(df):
-    df = df.copy()
-    df = calculate_trip_duration_in_minutes(df)
-    categorical_features = ["PULocationID", "DOLocationID"]
-    df[categorical_features] = df[categorical_features].astype(str)
-    df["trip_route"] = df["PULocationID"] + "_" + df["DOLocationID"]
-    df = df[["trip_route", "trip_distance", "trip_duration_minutes"]]
-    return df
+def load_train_params(params_path: str) -> tuple[float, int]:
+    params_file = Path(params_path)
+    if not params_file.exists():
+        return 0.2, 42
+
+    with params_file.open("r", encoding="utf-8") as f:
+        config = yaml.safe_load(f) or {}
+
+    train_config = config.get("train", {})
+    test_size = float(train_config.get("test_size", 0.2))
+    random_state = int(train_config.get("random_state", 42))
+    return test_size, random_state
 
 
-df_processed = preprocess(df)
-
-y = df_processed["trip_duration_minutes"]
-X = df_processed.drop(columns=["trip_duration_minutes"])
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, random_state=42, test_size=0.2
-)
-
-X_train = X_train.to_dict(orient="records")
-X_test = X_test.to_dict(orient="records")
-
-with mlflow.start_run() as run:
-    tags = {
-        "model": "xgboost pipeline",
-        "developer": "<your-name>",
-        "dataset": "green-taxi",
-        "features": features,
-        "target": target,
-    }
-    mlflow.set_tags(tags)
-    pipeline = make_pipeline(DictVectorizer(), xgb.XGBRegressor())
-    pipeline.fit(X_train, y_train)
-
-    y_pred_train = pipeline.predict(X_train)
-    rmse_train = root_mean_squared_error(y_train, y_pred_train)
-    mlflow.log_metric("rmse train", rmse_train)
-
-    y_pred_test = pipeline.predict(X_test)
-    rmse_test = root_mean_squared_error(y_test, y_pred_test)
-    mlflow.log_metric("rmse test", rmse_test)
-
-    mlflow.sklearn.log_model(pipeline, "model")
-
-    run_id = run.info.run_id
-    model_uri = f"runs:/{run_id}/model"
-    mlflow.register_model(model_uri=model_uri, name=model_name)
+def choose_target_column(df: pd.DataFrame) -> str:
+    preferred_targets = ("fare_amount", "target", "label", "y")
+    for column in preferred_targets:
+        if column in df.columns:
+            return column
+    return str(df.columns[-1])
 
 
-if cml_run:
-    with open("metrics.txt", "w") as f:
-        f.write(f"RMSE on the Train Set: {rmse_train}\n")
-        f.write(f"RMSE on the Test Set: {rmse_test}\n")
+def main() -> None:
+    args = parse_args()
+    df = pd.read_parquet(args.input_path)
+
+    if df.shape[1] < 2:
+        raise ValueError("Expected at least two numeric columns to train a model.")
+
+    target_column = choose_target_column(df)
+    feature_columns = [column for column in df.columns if column != target_column]
+
+    if not feature_columns:
+        raise ValueError("No feature columns remain after selecting target column.")
+
+    X = df[feature_columns]
+    y = df[target_column]
+    test_size, random_state = load_train_params(args.params_path)
+
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=test_size, random_state=random_state
+    )
+
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    rmse = float(mean_squared_error(y_test, y_pred) ** 0.5)
+
+    model_output_path = Path(args.model_output)
+    model_output_path.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(
+        {
+            "model": model,
+            "target_column": target_column,
+            "feature_columns": feature_columns,
+        },
+        model_output_path,
+    )
+
+    metrics_output_path = Path(args.metrics_output)
+    metrics_output_path.parent.mkdir(parents=True, exist_ok=True)
+    with metrics_output_path.open("w", encoding="utf-8") as f:
+        json.dump({"rmse": rmse}, f, indent=2)
+
+
+if __name__ == "__main__":
+    main()

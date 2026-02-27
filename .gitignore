@@ -166,3 +166,6 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 .dvc/config.local
+model.pkl
+data/features.parquet
+/metrics.json
