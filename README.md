@@ -13,11 +13,15 @@ This repository demonstrates:
 ├── .github/workflows/
 │   ├── black.yml
 │   ├── cml.yaml
+│   ├── metrics-pr.yml
 │   └── test.yml
 ├── data/
 │   ├── .gitkeep
 │   ├── green_tripdata_2025-01.parquet
 │   └── green_tripdata_2025-01.parquet.dvc
+├── models/
+│   ├── .gitignore
+│   └── model.joblib.dvc
 ├── src/
 │   ├── __init__.py
 │   ├── calculator.py
@@ -26,6 +30,9 @@ This repository demonstrates:
 ├── tests/
 │   └── test_calculator.py
 ├── .pre-commit-config.yaml
+├── dvc.lock
+├── dvc.yaml
+├── params.yaml
 ├── requirements.txt
 └── README.md
 ```
@@ -35,6 +42,7 @@ This repository demonstrates:
 Active workflow files:
 - `.github/workflows/test.yml` (runs `pytest`)
 - `.github/workflows/black.yml` (runs `black --check .`)
+- `.github/workflows/metrics-pr.yml` (posts DVC metrics diff on PRs)
 
 ## pre-commit + Black
 
@@ -85,32 +93,20 @@ dvc pull
 pytest
 pre-commit run --all-files
 ```
-## Reproducible ML pipeline (DVC)
+## MLOps Upgrades
 
-This repo includes a minimal ML training pipeline managed by **DVC**.
+- **MLflow experiment tracking**: `src/train.py` logs params, RMSE, and `models/model.joblib` to local MLflow runs (`mlruns/`).
+- **PR metrics diff**: `.github/workflows/metrics-pr.yml` runs DVC + tests on pull requests and comments a metrics markdown report with CML.
+- **DVC-tracked model artifact**: `models/model.joblib` is tracked via `models/model.joblib.dvc`.
 
-### What it does
-- pulls the dataset with DVC
-- trains a simple sklearn model
-- writes:
-  - `models/model.joblib` (the trained model)
-  - `metrics.json` (evaluation metrics)
-
-### Run it locally
+Run locally:
 
 ```bash
-# 1) Create env + install deps
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -U pip
-pip install -r requirements.txt
-
-# 2) Pull data from the DVC remote
 dvc pull
-
-# 3) Run tests + formatting
+dvc repro
 pytest
 pre-commit run --all-files
-
-# 4) Run the training pipeline (reproducible)
-dvc repro
+mlflow ui --backend-store-uri ./mlruns
+# optional: compare metrics against main
+dvc metrics diff --md origin/main
+```

@@ -11,9 +11,6 @@ stages:
       - train.target_column
       - train.feature_columns
       - train.model_type
-    outs:
-      - models/model.joblib:
-          cache: true
     metrics:
       - metrics.json:
           cache: false

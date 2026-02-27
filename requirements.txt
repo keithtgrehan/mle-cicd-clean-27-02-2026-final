@@ -4,3 +4,4 @@ pre-commit
 pandas
 scikit-learn
 joblib
+mlflow

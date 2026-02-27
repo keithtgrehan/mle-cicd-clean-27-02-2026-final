@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 import joblib
+import mlflow
 import pandas as pd
 import yaml
 from sklearn.ensemble import RandomForestRegressor
@@ -11,29 +13,34 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
 
-from .features import build_features
+try:
+    from .features import build_features
+except ImportError:  # pragma: no cover - supports `python src/train.py`
+    from features import build_features
 
 PARAMS_PATH = Path("params.yaml")
 DATA_PATH = Path("data/green_tripdata_2025-01.parquet")
 MODEL_PATH = Path("models/model.joblib")
 METRICS_PATH = Path("metrics.json")
+DEFAULT_TRAIN_PARAMS = {
+    "test_size": 0.2,
+    "random_state": 42,
+    "target_column": "fare_amount",
+    "feature_columns": ["vendor_id", "passenger_count", "trip_distance"],
+    "model_type": "linear_regression",
+}
 
 
 def load_params(params_path: Path = PARAMS_PATH) -> dict:
-    with params_path.open("r", encoding="utf-8") as f:
-        params = yaml.safe_load(f) or {}
-    train = params.get("train", {})
-    required = {
-        "test_size",
-        "random_state",
-        "target_column",
-        "feature_columns",
-        "model_type",
-    }
-    missing = required - set(train.keys())
-    if missing:
-        raise ValueError(f"Missing required train params: {sorted(missing)}")
-    return train
+    train_params = DEFAULT_TRAIN_PARAMS.copy()
+    if params_path.exists():
+        with params_path.open("r", encoding="utf-8") as f:
+            params = yaml.safe_load(f) or {}
+        train_params.update(params.get("train", {}))
+
+    if not train_params["feature_columns"]:
+        raise ValueError("feature_columns must not be empty.")
+    return train_params
 
 
 def make_model(model_type: str, random_state: int):
@@ -46,6 +53,14 @@ def make_model(model_type: str, random_state: int):
 
 def main() -> None:
     train_params = load_params()
+
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
+    if tracking_uri:
+        mlflow.set_tracking_uri(tracking_uri)
+    mlflow.set_experiment(
+        os.getenv("MLFLOW_EXPERIMENT_NAME", "mle-cicd-clean-27-02-2026-final")
+    )
+
     df = pd.read_parquet(DATA_PATH)
 
     target_column = str(train_params["target_column"])
@@ -78,6 +93,22 @@ def main() -> None:
         "n_test": int(len(X_test)),
     }
     METRICS_PATH.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
+
+    with mlflow.start_run() as run:
+        mlflow.log_params(
+            {
+                "model_type": model_type,
+                "test_size": test_size,
+                "random_state": random_state,
+                "target_column": target_column,
+                "feature_columns": ",".join(feature_columns),
+            }
+        )
+        mlflow.log_metric("rmse", rmse)
+        mlflow.log_artifact(str(MODEL_PATH))
+        run_id = run.info.run_id
+
+    print(f"MLflow run_id: {run_id}")
 
 
 if __name__ == "__main__":

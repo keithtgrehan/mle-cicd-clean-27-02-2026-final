@@ -13,8 +13,8 @@ stages:
       size: 886
     - path: src/train.py
       hash: md5
-      md5: d126db7b40a085f9d63737c7abe76b22
-      size: 2542
+      md5: 8a89ce68eab9f7c5b75742ffe7fed9bc
+      size: 3577
     params:
       params.yaml:
         train.feature_columns:
@@ -30,7 +30,3 @@ stages:
       hash: md5
       md5: 3433d7665c1dcfb544f8123d9869ac03
       size: 222
-    - path: models/model.joblib
-      hash: md5
-      md5: dffad3cd563833c40d9e2cc43045ed53
-      size: 896

@@ -162,10 +162,12 @@ sa_key/
 data/*.parquet
 .mlflow/
 mlruns/
+mlflow.db
 __pycache__/
 .pytest_cache/
 .DS_Store
 .dvc/config.local
 model.pkl
+models/model.joblib
 data/features.parquet
 /metrics.json
