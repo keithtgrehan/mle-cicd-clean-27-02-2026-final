@@ -73,3 +73,32 @@ dvc pull
 pytest
 pre-commit run --all-files
 ```
+## Reproducible ML pipeline (DVC)
+
+This repo includes a minimal ML training pipeline managed by **DVC**.
+
+### What it does
+- pulls the dataset with DVC
+- trains a simple sklearn model
+- writes:
+  - `models/model.joblib` (the trained model)
+  - `metrics.json` (evaluation metrics)
+
+### Run it locally
+
+```bash
+# 1) Create env + install deps
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -U pip
+pip install -r requirements.txt
+
+# 2) Pull data from the DVC remote
+dvc pull
+
+# 3) Run tests + formatting
+pytest
+pre-commit run --all-files
+
+# 4) Run the training pipeline (reproducible)
+dvc repro
